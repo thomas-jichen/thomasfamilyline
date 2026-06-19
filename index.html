@@ -187,7 +187,7 @@
       stubColor: oc, stubNumColor: numColor(oc), tint: tint(oc),
       hasImage: !!it.image, noImage: !it.image, hasLink: !!it.link,
       claimed: !!cl, unclaimed: !cl,
-      claimText: cl ? '已认领 · ' + cl.name : '待认领',
+      claimText: cl ? '已认领' : '待认领',
       claimerName: cl ? cl.name : '', claimerNum: cl ? cl.num : '',
       claimerColor: cl ? cl.color : INK, claimerNumColor: cl ? numColor(cl.color) : '#fff',
     });
@@ -304,7 +304,7 @@
   function itemCard(it) {
     var e = enrich(it);
     var claimBadge = e.claimed
-      ? '<span class="ns" style="background:' + e.claimerColor + '; color:' + e.claimerNumColor + '; border:2px solid ' + H + '; font-size:11px; font-weight:700; padding:3px 7px;">' + esc(e.claimText) + '</span>'
+      ? '<span class="ns" style="background:' + H + '; color:#fff; border:2px solid ' + H + '; font-size:11px; font-weight:700; padding:3px 7px;">' + esc(e.claimText) + '</span>'
       : '<span class="ns" style="border:2px solid ' + H + '; font-size:11px; font-weight:700; padding:3px 9px;">' + esc(e.claimText) + '</span>';
     var star = it.priority ? '<span style="width:22px; height:22px; flex:none; background:' + YEL + '; border:2px solid ' + H + '; display:flex; align-items:center; justify-content:center; font-size:12px;">★</span>' : '';
     return '' +
@@ -454,11 +454,9 @@
 
     var claimRow = d.claimed
       ? '<div style="display:flex; align-items:center; gap:12px;">' +
-          '<div style="width:44px; height:44px; border-radius:50%; background:' + d.claimerColor + '; border:3px solid ' + H + '; display:flex; align-items:center; justify-content:center; flex:none;">' +
-            '<span class="arc" style="font-weight:900; font-size:19px; color:' + d.claimerNumColor + ';">' + d.claimerNum + '</span></div>' +
           '<div style="flex:1;">' +
             '<div class="mono" style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.6;">Claimed · 已认领</div>' +
-            '<div class="ns" style="font-weight:900; font-size:18px;">由 ' + esc(d.claimerName) + ' 准备</div></div>' +
+            '<div class="ns" style="font-weight:900; font-size:18px;">有人准备中 · Someone\'s got this</div></div>' +
           '<div class="unclaim-btn" onclick="app.unclaim()" style="border:2px solid ' + H + '; padding:6px 10px; cursor:pointer; font-size:11px; font-weight:700;">取消</div>' +
         '</div>'
       : '<div class="claim-cta" onclick="app.openPicker()" style="background:' + H + '; padding:14px; text-align:center; cursor:pointer;">' +
@@ -473,11 +471,12 @@
       : '';
 
     var linkBtn = d.hasLink
-      ? '<a href="' + esc(d.link) + '" target="_blank" rel="noopener" class="link-chip" onclick="event.stopPropagation()" style="display:inline-flex; align-items:center; gap:7px; text-decoration:none; border:2.5px solid ' + H + '; background:#fff; padding:7px 11px; margin-top:14px;">' +
+      ? '<a href="' + esc(d.link) + '" target="_blank" rel="noopener" class="link-chip" onclick="event.stopPropagation()" style="display:inline-flex; align-items:center; gap:9px; text-decoration:none; border:2.5px solid ' + H + '; background:#fff; padding:7px 12px; margin-top:14px;">' +
           '<span style="width:9px; height:9px; flex:none; border-radius:50%; background:' + BLUE + '; border:2px solid ' + H + ';"></span>' +
-          '<span class="arc" style="font-weight:900; font-size:12px; line-height:1; color:' + H + '; text-transform:uppercase; letter-spacing:.3px;">View sample</span>' +
-          '<span class="ns" style="font-weight:700; font-size:12px; line-height:1; color:' + H + '; opacity:.65;">查看链接</span>' +
-          '<span class="arc" style="font-weight:900; font-size:13px; color:' + BLUE + ';">↗</span></a>'
+          '<span style="display:inline-flex; align-items:center; gap:7px;">' +
+            '<span class="arc" style="font-weight:900; font-size:13px; line-height:1; color:' + H + '; text-transform:uppercase; letter-spacing:.3px;">View sample</span>' +
+            '<span class="ns" style="font-weight:700; font-size:12px; line-height:1; color:' + H + '; opacity:.55;">查看链接</span>' +
+          '</span></a>'
       : '';
 
     return '' +
