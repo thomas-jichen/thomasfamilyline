@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thomas Family Line · 托马斯家庭礼物专线</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#DAD3C3; }
+  .arc{ font-family:'Archivo',sans-serif; }
+  .ns{ font-family:'Noto Sans SC',sans-serif; }
+  .mono{ font-family:'Space Mono',monospace; }
+  input{ font-family:'Space Grotesk',sans-serif; }
+  @keyframes fab{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
+  @keyframes pop{ from{ transform:scale(.96); opacity:0; } to{ transform:scale(1); opacity:1; } }
+
+  /* hover states (ported from the prototype's style-hover attrs) */
+  .tile:hover{ background:#FBF7EE; transform:translateX(2px); }
+  .icon-btn:hover{ background:#FBF7EE; }
+  .item-card:hover{ box-shadow:4px 4px 0 rgba(22,19,17,.18); }
+  .edit-btn:hover{ background:#FFD42A; }
+  .save-btn:hover{ background:#1A4F94 !important; }
+  .picker-tile:hover{ background:#FBF7EE; transform:translateY(-1px); }
+  .unclaim-btn:hover{ background:#F2ECDF; }
+  .claim-cta:hover{ background:#2A2521 !important; }
+
+</style>
+</head>
+<body>
+<div style="min-height:100vh; display:flex; justify-content:center; background:#DAD3C3; font-family:'Space Grotesk',sans-serif; color:#161311;">
+  <div style="width:100%; max-width:440px; height:100vh; position:relative; overflow:hidden; background:#F2ECDF; border-left:2px solid #161311; border-right:2px solid #161311;">
+    <div style="position:absolute; inset:0; overflow:auto;">
+      <div id="screen"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Shared-state config (Supabase). Fill these in to enable shared, realtime state. -->
+<script src="./config.js"></script>
+<!-- Supabase JS client (only used when config.js is filled in) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- palette ----------
+  var BLUE = '#1E5BA8', RED = '#D72631', YEL = '#F7C600', INK = '#161311';
+
+  var members = [
+    { id: 'm1', num: '1', name: '丁丁', color: BLUE },
+    { id: 'm2', num: '2', name: '妈妈', color: RED },
+    { id: 'm3', num: '3', name: '爸爸', color: YEL },
+    { id: 'm4', num: '4', name: '大姨', color: BLUE },
+    { id: 'm5', num: '5', name: '姑姑', color: RED },
+    { id: 'm6', num: '6', name: '阿公', color: YEL },
+    { id: 'm7', num: '7', name: '爷爷', color: BLUE },
+  ];
+
+  function numColor(c) { return c === YEL ? INK : '#FFFFFF'; }
+  function tint(c) { return c === YEL ? '#FBEEB0' : c === RED ? '#F6D9DB' : '#DBE6F3'; }
+  function memberById(id) { for (var i = 0; i < members.length; i++) if (members[i].id === id) return members[i]; return null; }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function defaults() {
+    var it = function (id, ownerId, en, cn, price, shop, link, image, priority, claimedBy) {
+      return { id: id, ownerId: ownerId, title_en: en, title_cn: cn, price: price, shop: shop, link: link, image: image, priority: priority, claimedBy: claimedBy };
+    };
+    return [
+      it('i01', 'm1', 'LEGO Train Set', '乐高火车套装', '$89', 'lego.com', 'https://www.lego.com', 'https://picsum.photos/seed/legotrain/600/400', true, 'm2'),
+      it('i02', 'm1', 'Noise-Cancelling Headphones', '降噪耳机', '$199', 'sony.com', 'https://www.sony.com', '', false, null),
+      it('i03', 'm1', 'Watercolor Paint Set', '水彩颜料套装', '$34', 'blick.com', 'https://www.dickblick.com', '', false, 'm4'),
+      it('i04', 'm1', 'Trail Running Shoes', '越野跑鞋', '$120', 'nike.com', 'https://www.nike.com', '', true, null),
+      it('i05', 'm1', 'Dumpling Cookbook', '饺子食谱书', '$25', 'amazon.com', 'https://www.amazon.com', '', false, null),
+      it('i06', 'm2', 'Silk Scarf', '真丝丝巾', '$60', 'uniqlo.com', 'https://www.uniqlo.com', 'https://picsum.photos/seed/silkscarf/600/400', true, 'm1'),
+      it('i07', 'm2', 'Tea Gift Box', '茶叶礼盒', '$45', 'teabox.com', 'https://www.teabox.com', '', false, null),
+      it('i08', 'm2', 'Garden Gloves', '园艺手套', '$18', 'amazon.com', 'https://www.amazon.com', '', false, 'm5'),
+      it('i09', 'm2', 'Reading Lamp', '阅读灯', '$52', 'ikea.com', 'https://www.ikea.com', '', false, null),
+      it('i10', 'm3', 'Fishing Rod', '钓鱼竿', '$75', 'cabelas.com', 'https://www.cabelas.com', '', false, null),
+      it('i11', 'm3', 'Leather Wallet', '真皮钱包', '$40', 'coach.com', 'https://www.coach.com', '', false, 'm1'),
+      it('i12', 'm3', 'Whiskey Glasses', '威士忌酒杯', '$30', 'amazon.com', 'https://www.amazon.com', '', true, null),
+      it('i13', 'm4', 'Yoga Mat', '瑜伽垫', '$35', 'lululemon.com', 'https://www.lululemon.com', '', false, null),
+      it('i14', 'm4', 'Cookbook Stand', '食谱支架', '$22', 'amazon.com', 'https://www.amazon.com', '', false, 'm2'),
+      it('i15', 'm5', 'Scented Candle Set', '香薰蜡烛套装', '$28', 'diptyque.com', 'https://www.diptyqueparis.com', '', true, 'm3'),
+      it('i16', 'm5', 'Travel Backpack', '旅行背包', '$95', 'patagonia.com', 'https://www.patagonia.com', 'https://picsum.photos/seed/backpack/600/400', false, null),
+      it('i17', 'm6', 'Calligraphy Brush Set', '毛笔套装', '$48', 'amazon.com', 'https://www.amazon.com', '', false, null),
+      it('i18', 'm6', 'Reading Glasses', '老花镜', '$20', 'warbyparker.com', 'https://www.warbyparker.com', '', true, 'm7'),
+      it('i19', 'm7', 'Bonsai Tree', '盆景', '$65', 'bonsaiboy.com', 'https://www.bonsaiboy.com', 'https://picsum.photos/seed/bonsai/600/400', false, null),
+      it('i20', 'm7', 'Wool Sweater', '羊毛衫', '$80', 'uniqlo.com', 'https://www.uniqlo.com', '', false, null),
+    ];
+  }
+
+  // =====================================================================
+  //  Data layer — Supabase (shared, realtime) with localStorage fallback
+  // =====================================================================
+  var cfg = window.APP_CONFIG || {};
+  var useSupabase = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY &&
+                       cfg.SUPABASE_URL.indexOf('YOUR-') === -1 &&
+                       window.supabase && window.supabase.createClient);
+  var sb = useSupabase ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
+
+  function toApp(row) {
+    return {
+      id: row.id, ownerId: row.owner_id,
+      title_en: row.title_en, title_cn: row.title_cn,
+      price: row.price, shop: row.shop, link: row.link, image: row.image,
+      priority: !!row.priority, claimedBy: row.claimed_by,
+      created_at: row.created_at,
+    };
+  }
+  function toDb(item) {
+    return {
+      owner_id: item.ownerId,
+      title_en: item.title_en, title_cn: item.title_cn,
+      price: item.price, shop: item.shop, link: item.link, image: item.image,
+      priority: !!item.priority, claimed_by: item.claimedBy || null,
+    };
+  }
+
+  function setConn(text, color) {
+    // connection pill removed; no-op
+  }
+
+  // localStorage fallback store
+  var LS_KEY = 'familyGiftsB';
+  function lsLoad() {
+    try { var raw = localStorage.getItem(LS_KEY); if (raw) { var a = JSON.parse(raw); if (Array.isArray(a)) return a; } } catch (e) {}
+    return defaults();
+  }
+  function lsSave(items) { try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch (e) {} }
+
+  // ---------- store API (async) ----------
+  var store = {
+    async fetchAll() {
+      if (!useSupabase) return lsLoad();
+      var res = await sb.from('items').select('*').order('created_at', { ascending: true });
+      if (res.error) { console.error(res.error); setConn('offline · 离线', RED); return state.items.length ? state.items : []; }
+      return res.data.map(toApp);
+    },
+    async insert(item) {
+      if (!useSupabase) { var a = lsLoad(); a.push(Object.assign({}, item, { id: 'i' + Date.now() })); lsSave(a); return; }
+      var res = await sb.from('items').insert(toDb(item));
+      if (res.error) console.error(res.error);
+    },
+    async update(id, patch) {
+      if (!useSupabase) { var a = lsLoad().map(function (i) { return i.id === id ? Object.assign({}, i, patch) : i; }); lsSave(a); return; }
+      var dbPatch = {};
+      if ('ownerId' in patch) dbPatch.owner_id = patch.ownerId;
+      if ('claimedBy' in patch) dbPatch.claimed_by = patch.claimedBy || null;
+      ['title_en', 'title_cn', 'price', 'shop', 'link', 'image', 'priority'].forEach(function (k) { if (k in patch) dbPatch[k] = patch[k]; });
+      var res = await sb.from('items').update(dbPatch).eq('id', id);
+      if (res.error) console.error(res.error);
+    },
+    async remove(id) {
+      if (!useSupabase) { lsSave(lsLoad().filter(function (i) { return i.id !== id; })); return; }
+      var res = await sb.from('items').delete().eq('id', id);
+      if (res.error) console.error(res.error);
+    },
+    subscribe(onChange) {
+      if (!useSupabase) return;
+      sb.channel('items-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, onChange)
+        .subscribe(function (status) {
+          if (status === 'SUBSCRIBED') setConn('live · 实时同步', '#1E7A3A');
+        });
+    },
+  };
+
+  // =====================================================================
+  //  App state + controller
+  // =====================================================================
+  var state = { items: [], view: { name: 'home' }, form: null, showClaimPicker: false };
+
+  async function refresh(rerender) {
+    state.items = await store.fetchAll();
+    if (rerender !== false) render();
+  }
+
+  function enrich(it) {
+    var owner = memberById(it.ownerId);
+    var oc = owner ? owner.color : INK;
+    var cl = it.claimedBy ? memberById(it.claimedBy) : null;
+    return Object.assign({}, it, {
+      stubColor: oc, stubNumColor: numColor(oc), tint: tint(oc),
+      hasImage: !!it.image, noImage: !it.image, hasLink: !!it.link,
+      claimed: !!cl, unclaimed: !cl,
+      claimText: cl ? '已认领 · ' + cl.name : '待认领',
+      claimerName: cl ? cl.name : '', claimerNum: cl ? cl.num : '',
+      claimerColor: cl ? cl.color : INK, claimerNumColor: cl ? numColor(cl.color) : '#fff',
+    });
+  }
+
+  var app = {
+    go: function (view) { state.view = view; state.showClaimPicker = false; render(); },
+    openPerson: function (mid) { app.go({ name: 'person', memberId: mid }); },
+    openDetail: function (id) { app.go({ name: 'detail', itemId: id }); },
+    back: function () {
+      var v = state.view;
+      if (v.name === 'detail') { var it = state.items.find(function (i) { return i.id === v.itemId; }); app.go({ name: 'person', memberId: it ? it.ownerId : null }); }
+      else if (v.name === 'form') { app.go({ name: 'person', memberId: state.form.ownerId }); }
+      else app.go({ name: 'home' });
+    },
+    goAdd: function () {
+      var memberId = state.view.memberId;
+      state.form = { ownerId: memberId, title_en: '', title_cn: '', price: '', shop: '', link: '', image: '', priority: false, claimedBy: null };
+      app.go({ name: 'form' });
+    },
+    edit: function () {
+      var it = state.items.find(function (i) { return i.id === state.view.itemId; });
+      state.form = Object.assign({}, it);
+      app.go({ name: 'form' });
+    },
+    onField: function (name, value) { if (state.form) state.form[name] = value; },
+    updateImagePreview: function (value) {
+      if (state.form) state.form.image = value;
+      var box = document.getElementById('form-image-preview');
+      if (!box) return;
+      if (value) box.innerHTML = '<img src="' + esc(value) + '" style="width:100%; height:100%; object-fit:cover; display:block;">';
+      else box.innerHTML = '<div style="position:absolute; inset:0; background:repeating-linear-gradient(45deg, rgba(0,0,0,.06) 0 9px, transparent 9px 18px);"></div>' +
+        '<span class="mono" style="position:absolute; left:10px; bottom:8px; font-size:10px;">paste an image url above · 粘贴图片链接</span>';
+    },
+    togglePri: function () { if (state.form) { state.form.priority = !state.form.priority; render(); } },
+    save: async function () {
+      var f = state.form;
+      var targetOwner = f.ownerId;
+      if (f.id) await store.update(f.id, f); else await store.insert(f);
+      state.form = null;
+      await refresh(false);
+      app.go({ name: 'person', memberId: targetOwner });
+    },
+    del: async function () {
+      var v = state.view;
+      var id = v.name === 'detail' ? v.itemId : (state.form && state.form.id);
+      if (!id) { app.back(); return; }
+      var item = state.items.find(function (i) { return i.id === id; }) || {};
+      var owner = item.ownerId;
+      await store.remove(id);
+      state.form = null;
+      await refresh(false);
+      app.go({ name: 'person', memberId: owner });
+    },
+    openPicker: function () { state.showClaimPicker = true; render(); },
+    closePicker: function () { state.showClaimPicker = false; render(); },
+    setClaim: async function (mid) {
+      var id = state.view.itemId;
+      state.showClaimPicker = false;
+      await store.update(id, { claimedBy: mid });
+      await refresh();
+    },
+    unclaim: async function (mid) {
+      var id = state.view.itemId;
+      await store.update(id, { claimedBy: null });
+      await refresh();
+    },
+  };
+  window.app = app;
+
+  // =====================================================================
+  //  Views
+  // =====================================================================
+  var H = INK; // ink shorthand
+
+  function statText(its) {
+    var claimed = its.filter(function (i) { return i.claimedBy; }).length;
+    return its.length + ' 心愿 · ' + claimed + ' 已认领';
+  }
+
+  function viewHome() {
+    var rows = members.map(function (m) {
+      var its = state.items.filter(function (i) { return i.ownerId === m.id; });
+      var nc = numColor(m.color);
+      return '' +
+        '<div onclick="app.openPerson(\'' + m.id + '\')" style="display:flex; align-items:center; gap:14px; position:relative; padding:9px 0; cursor:pointer;">' +
+          '<div style="width:52px; height:52px; border-radius:50%; background:' + m.color + '; border:4px solid ' + H + '; display:flex; align-items:center; justify-content:center; flex:none; z-index:1;">' +
+            '<span class="arc" style="font-weight:900; font-size:22px; color:' + nc + ';">' + m.num + '</span>' +
+          '</div>' +
+          '<div class="tile" style="flex:1; min-width:0; background:#fff; border:3px solid ' + H + '; padding:11px 14px; display:flex; align-items:center; justify-content:space-between; transition:.12s;">' +
+            '<div>' +
+              '<div class="ns" style="font-weight:900; font-size:21px; line-height:1;">' + m.name + '</div>' +
+              '<div class="mono" style="font-size:10px; opacity:.7; margin-top:3px;">' + statText(its) + '</div>' +
+            '</div>' +
+            '<span class="arc" style="font-weight:900; font-size:24px; color:' + m.color + ';">›</span>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+
+    return '' +
+      '<div style="padding:30px 24px 40px;">' +
+        '<div class="mono" style="font-size:10px; letter-spacing:2px; text-transform:uppercase; margin-bottom:14px;"><br></div>' +
+        '<div style="padding:0 0 8px;">' +
+          '<div class="arc" style="font-weight:900; font-size:33px; line-height:.88; letter-spacing:-1.5px; text-transform:uppercase;">THOMAS FAMILY LINE</div>' +
+          '<div class="ns" style="font-weight:900; font-size:17px; margin-top:8px; color:' + RED + ';">托马斯家庭礼物专线</div>' +
+        '</div>' +
+        '<div style="position:relative; padding-left:8px; margin-top:18px;">' +
+          '<div style="position:absolute; left:30px; top:24px; bottom:24px; width:8px; background:' + H + ';"></div>' +
+          rows +
+        '</div>' +
+      '</div>';
+  }
+
+  function itemCard(it) {
+    var e = enrich(it);
+    var claimBadge = e.claimed
+      ? '<span class="ns" style="background:' + e.claimerColor + '; color:' + e.claimerNumColor + '; border:2px solid ' + H + '; font-size:11px; font-weight:700; padding:3px 7px;">' + esc(e.claimText) + '</span>'
+      : '<span class="ns" style="border:2px solid ' + H + '; font-size:11px; font-weight:700; padding:3px 9px;">' + esc(e.claimText) + '</span>';
+    var star = it.priority ? '<span style="width:22px; height:22px; flex:none; background:' + YEL + '; border:2px solid ' + H + '; display:flex; align-items:center; justify-content:center; font-size:12px;">★</span>' : '';
+    return '' +
+      '<div class="item-card" onclick="app.openDetail(\'' + e.id + '\')" style="display:flex; border:3px solid ' + H + '; background:#fff; min-height:96px; cursor:pointer; transition:.12s;">' +
+        '<div style="width:80px; flex:none; background:' + e.stubColor + '; border-right:3px dashed ' + H + '; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 4px;">' +
+          '<span class="arc" style="font-weight:900; font-size:18px; color:' + e.stubNumColor + ';">' + esc(e.price) + '</span>' +
+          '<span class="ns" style="font-size:10px; font-weight:700; color:' + e.stubNumColor + '; margin-top:2px; opacity:.85;">心愿券</span>' +
+        '</div>' +
+        '<div style="flex:1; min-width:0; padding:11px 13px; display:flex; flex-direction:column; justify-content:space-between;">' +
+          '<div style="display:flex; align-items:flex-start; gap:6px;">' +
+            '<div style="flex:1; min-width:0;">' +
+              '<div class="arc" style="font-weight:800; font-size:15px; line-height:1.05;">' + esc(e.title_en) + '</div>' +
+              '<div class="ns" style="font-weight:700; font-size:13px; opacity:.78;">' + esc(e.title_cn) + '</div>' +
+            '</div>' + star +
+          '</div>' +
+          '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">' +
+            '<span class="mono" style="font-size:10px; border:1.5px solid ' + H + '; padding:1px 5px;">' + esc(e.shop) + '</span>' +
+            claimBadge +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function viewPerson() {
+    var m = memberById(state.view.memberId) || members[0];
+    var its = state.items.filter(function (i) { return i.ownerId === m.id; });
+    var nc = numColor(m.color);
+
+    var empty = its.length === 0
+      ? '<div style="border:3px dashed ' + H + '; padding:40px 20px; text-align:center; opacity:.65;">' +
+          '<div class="arc" style="font-weight:800; font-size:16px;">No wishes yet</div>' +
+          '<div class="ns" style="font-weight:700; font-size:14px; margin-top:4px;">还没有心愿，点 + 添加</div>' +
+        '</div>'
+      : '';
+
+    var list = its.map(itemCard).join('');
+
+    return '' +
+      '<div style="padding:30px 24px 110px;">' +
+        '<div style="display:flex; align-items:center; gap:12px; padding-bottom:16px;">' +
+          '<div class="icon-btn" onclick="app.back()" style="width:38px; height:38px; border:3px solid ' + H + '; display:flex; align-items:center; justify-content:center; background:#fff; cursor:pointer;">' +
+            '<span class="arc" style="font-weight:900; font-size:20px;">‹</span></div>' +
+          '<div style="width:42px; height:42px; border-radius:50%; background:' + m.color + '; border:3px solid ' + H + '; display:flex; align-items:center; justify-content:center;">' +
+            '<span class="arc" style="font-weight:900; font-size:19px; color:' + nc + ';">' + m.num + '</span></div>' +
+          '<div><div class="ns" style="font-weight:900; font-size:24px; line-height:1;">' + m.name + '</div></div>' +
+        '</div>' +
+        empty +
+        '<div style="display:flex; flex-direction:column; gap:14px;">' + list + '</div>' +
+      '</div>' +
+      '<div onclick="app.goAdd()" style="position:absolute; right:24px; bottom:28px; width:64px; height:64px; border-radius:50%; background:' + RED + '; border:4px solid ' + H + '; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 0 rgba(22,19,17,.25); animation:fab 2.4s ease-in-out infinite; cursor:pointer;">' +
+        '<span class="arc" style="font-weight:900; font-size:36px; color:#fff; line-height:1; margin-top:-3px;">+</span>' +
+      '</div>';
+  }
+
+  function viewForm() {
+    var f = state.form || {};
+    var owner = memberById(f.ownerId) || members[0];
+    var oNc = numColor(owner.color);
+    var isEdit = !!f.id;
+    var formTitle = isEdit ? 'Edit Wish' : 'New Ticket';
+    var formTitleCn = isEdit ? '编辑心愿' : '添加心愿 · 新车票';
+    var saveLabel = isEdit ? 'Save' : 'Add to list';
+    var saveLabelCn = isEdit ? '保存' : '加入清单';
+    var priBg = f.priority ? YEL : '#fff';
+    var priTrack = f.priority ? YEL : '#fff';
+    var priKnob = f.priority ? 'right:1px;' : 'left:1px;';
+
+    var imgInner = f.image
+      ? '<img src="' + esc(f.image) + '" style="width:100%; height:100%; object-fit:cover; display:block;">'
+      : '<div style="position:absolute; inset:0; background:repeating-linear-gradient(45deg, rgba(0,0,0,.06) 0 9px, transparent 9px 18px);"></div>' +
+        '<span class="mono" style="position:absolute; left:10px; bottom:8px; font-size:10px;">paste an image url above · 粘贴图片链接</span>';
+
+    var delBlock = isEdit
+      ? '<div onclick="app.del()" style="text-align:center; margin-top:14px; cursor:pointer; padding:10px;">' +
+          '<span class="ns" style="font-weight:700; font-size:14px; color:' + RED + '; border-bottom:2px solid ' + RED + '; padding-bottom:2px;">删除这个心愿 · Delete</span></div>'
+      : '';
+
+    return '' +
+      '<div style="padding:30px 24px 40px;">' +
+        '<div style="display:flex; align-items:center; gap:12px; padding-bottom:16px;">' +
+          '<div class="icon-btn" onclick="app.back()" style="width:38px; height:38px; border:3px solid ' + H + '; display:flex; align-items:center; justify-content:center; background:#fff; cursor:pointer;">' +
+            '<span class="arc" style="font-weight:900; font-size:20px;">‹</span></div>' +
+          '<div>' +
+            '<div class="arc" style="font-weight:900; font-size:23px; text-transform:uppercase; line-height:.92; letter-spacing:-.5px;">' + formTitle + '</div>' +
+            '<div class="ns" style="font-weight:900; font-size:14px;">' + formTitleCn + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="border:3px solid ' + H + '; background:#fff;">' +
+          '<div style="background:' + owner.color + '; padding:12px 16px; border-bottom:3px solid ' + H + '; display:flex; align-items:center; justify-content:space-between;">' +
+            '<span class="arc" style="font-weight:900; font-size:14px; color:' + oNc + '; text-transform:uppercase;">Wish Ticket</span>' +
+            '<span class="ns" style="font-weight:700; font-size:13px; color:' + oNc + ';">' + owner.name + ' · No.' + owner.num + '</span>' +
+          '</div>' +
+          '<div style="padding:16px;">' +
+            label('ITEM NAME / 英文名') +
+            '<input value="' + esc(f.title_en) + '" oninput="app.onField(\'title_en\', this.value)" placeholder="e.g. Tea Gift Box" style="width:100%; border:2px solid ' + H + '; padding:11px 12px; font-size:16px; font-weight:700; margin-bottom:12px; outline:none; background:#fff;">' +
+            label('物品名称 (中文)') +
+            '<input value="' + esc(f.title_cn) + '" oninput="app.onField(\'title_cn\', this.value)" placeholder="例如 茶叶礼盒" class="ns" style="width:100%; border:2px solid ' + H + '; padding:11px 12px; font-size:15px; font-weight:700; margin-bottom:12px; outline:none; background:#fff;">' +
+            '<div style="display:flex; gap:12px; margin-bottom:12px;">' +
+              '<div style="flex:1;">' + label('Price / 价格') +
+                '<input value="' + esc(f.price) + '" oninput="app.onField(\'price\', this.value)" placeholder="$45" style="width:100%; border:2px solid ' + H + '; padding:11px 12px; font-size:15px; font-weight:700; outline:none; background:#fff;"></div>' +
+              '<div style="flex:1;">' + label('Shop / 店铺') +
+                '<input value="' + esc(f.shop) + '" oninput="app.onField(\'shop\', this.value)" placeholder="amazon.com" style="width:100%; border:2px solid ' + H + '; padding:11px 12px; font-size:15px; font-weight:700; outline:none; background:#fff;"></div>' +
+            '</div>' +
+            label('Sample link / 商品链接') +
+            '<input value="' + esc(f.link) + '" oninput="app.onField(\'link\', this.value)" placeholder="https://..." style="width:100%; border:2px solid ' + H + '; padding:11px 12px; font-size:13px; margin-bottom:12px; outline:none; background:#fff;">' +
+            label('Image URL / 图片链接') +
+            '<input value="' + esc(f.image) + '" oninput="app.updateImagePreview(this.value)" placeholder="https://...jpg" style="width:100%; border:2px solid ' + H + '; padding:11px 12px; font-size:13px; margin-bottom:10px; outline:none; background:#fff;">' +
+            '<div id="form-image-preview" style="position:relative; height:130px; border:2px solid ' + H + '; background:' + tint(owner.color) + '; margin-bottom:14px; overflow:hidden;">' + imgInner + '</div>' +
+            '<div onclick="app.togglePri()" style="border:2px solid ' + H + '; padding:11px 14px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:' + priBg + ';">' +
+              '<span style="font-size:14px; font-weight:700;"><span style="font-size:16px;">★</span> Most-wanted · <span class="ns">最想要</span></span>' +
+              '<span style="width:46px; height:24px; border:2px solid ' + H + '; position:relative; background:' + priTrack + ';">' +
+                '<span style="position:absolute; top:1px; width:16px; height:16px; background:' + H + '; ' + priKnob + '"></span>' +
+              '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="save-btn" onclick="app.save()" style="background:' + BLUE + '; border:4px solid ' + H + '; padding:16px; text-align:center; margin-top:16px; box-shadow:0 6px 0 rgba(22,19,17,.25); cursor:pointer;">' +
+          '<span class="arc" style="font-weight:900; font-size:18px; color:#fff; text-transform:uppercase;">' + saveLabel + '</span>' +
+          '<span class="ns" style="font-weight:900; font-size:16px; color:#fff; margin-left:8px;">' + saveLabelCn + '</span>' +
+        '</div>' +
+        delBlock +
+      '</div>';
+  }
+
+  function label(t) {
+    return '<div class="mono" style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px;">' + t + '</div>';
+  }
+
+  function viewDetail() {
+    var it = state.items.find(function (i) { return i.id === state.view.itemId; });
+    if (!it) { return '<div style="padding:40px; text-align:center;" class="ns">已删除</div>'; }
+    var d = enrich(it);
+
+    var imgBlock = d.hasImage
+      ? '<img src="' + esc(d.image) + '" style="width:100%; height:100%; object-fit:cover; display:block;">'
+      : '<div style="position:absolute; inset:0; background:repeating-linear-gradient(45deg, rgba(0,0,0,.06) 0 11px, transparent 11px 22px);"></div>' +
+        '<span class="mono" style="position:absolute; left:12px; bottom:10px; font-size:11px;">no image · 无图片</span>';
+
+    var priBadge = it.priority
+      ? '<div style="position:absolute; top:12px; left:12px; background:' + YEL + '; border:3px solid ' + H + '; padding:5px 10px; display:flex; align-items:center; gap:6px;">' +
+          '<span style="font-size:14px;">★</span><span style="font-size:12px; font-weight:800;">Most-wanted · <span class="ns">最想要</span></span></div>'
+      : '';
+
+    var claimRow = d.claimed
+      ? '<div style="display:flex; align-items:center; gap:12px;">' +
+          '<div style="width:44px; height:44px; border-radius:50%; background:' + d.claimerColor + '; border:3px solid ' + H + '; display:flex; align-items:center; justify-content:center; flex:none;">' +
+            '<span class="arc" style="font-weight:900; font-size:19px; color:' + d.claimerNumColor + ';">' + d.claimerNum + '</span></div>' +
+          '<div style="flex:1;">' +
+            '<div class="mono" style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.6;">Claimed · 已认领</div>' +
+            '<div class="ns" style="font-weight:900; font-size:18px;">由 ' + esc(d.claimerName) + ' 准备</div></div>' +
+          '<div class="unclaim-btn" onclick="app.unclaim()" style="border:2px solid ' + H + '; padding:6px 10px; cursor:pointer; font-size:11px; font-weight:700;">取消</div>' +
+        '</div>'
+      : '<div class="claim-cta" onclick="app.openPicker()" style="background:' + H + '; padding:14px; text-align:center; cursor:pointer;">' +
+          '<span class="arc" style="font-weight:900; font-size:15px; color:#fff; text-transform:uppercase;">I\'ll get this</span>' +
+          '<span class="ns" style="font-weight:700; font-size:14px; color:' + YEL + '; margin-left:8px;">我来准备</span></div>';
+
+    var linkBtn = d.hasLink
+      ? '<a href="' + esc(d.link) + '" target="_blank" rel="noopener" style="display:block; text-decoration:none; background:' + BLUE + '; padding:15px; text-align:center; margin-top:16px; border:4px solid ' + H + ';">' +
+          '<span class="arc" style="font-weight:900; font-size:15px; color:#fff; text-transform:uppercase;">View sample link</span>' +
+          '<span class="ns" style="font-weight:700; font-size:14px; color:' + YEL + '; margin-left:8px;">查看商品链接</span></a>'
+      : '';
+
+    return '' +
+      '<div style="padding:30px 24px 40px;">' +
+        '<div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:16px;">' +
+          '<div class="icon-btn" onclick="app.back()" style="width:38px; height:38px; border:3px solid ' + H + '; display:flex; align-items:center; justify-content:center; background:#fff; cursor:pointer;">' +
+            '<span class="arc" style="font-weight:900; font-size:20px;">‹</span></div>' +
+          '<div class="edit-btn" onclick="app.edit()" style="border:3px solid ' + H + '; background:' + YEL + '; padding:8px 14px; cursor:pointer; display:flex; align-items:center; gap:6px;">' +
+            '<span style="font-size:14px;">✎</span><span style="font-weight:800; font-size:13px;">Edit · <span class="ns">编辑</span></span></div>' +
+        '</div>' +
+
+        '<div style="border:4px solid ' + H + '; background:#fff;">' +
+          '<div style="position:relative; height:200px; border-bottom:3px dashed ' + H + '; background:' + d.tint + '; overflow:hidden;">' +
+            imgBlock + priBadge +
+            '<div style="position:absolute; right:-13px; top:-13px; width:24px; height:24px; border-radius:50%; background:#F2ECDF; border:3px solid ' + H + ';"></div>' +
+          '</div>' +
+          '<div style="padding:16px;">' +
+            '<div class="arc" style="font-weight:900; font-size:25px; line-height:1; letter-spacing:-.5px;">' + esc(d.title_en) + '</div>' +
+            '<div class="ns" style="font-weight:900; font-size:17px; opacity:.8; margin-top:4px;">' + esc(d.title_cn) + '</div>' +
+            '<div style="display:flex; align-items:baseline; gap:10px; margin:12px 0 4px;">' +
+              '<span class="arc" style="font-weight:900; font-size:32px; color:' + d.stubColor + ';">' + esc(d.price) + '</span>' +
+              '<span class="mono" style="font-size:11px; border:2px solid ' + H + '; padding:2px 7px;">' + esc(d.shop) + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div style="border-top:3px dashed ' + H + '; padding:14px 16px;">' + claimRow + '</div>' +
+        '</div>' +
+        linkBtn +
+      '</div>';
+  }
+
+  function claimPicker() {
+    if (!state.showClaimPicker) return '';
+    var tiles = members.map(function (p) {
+      var nc = numColor(p.color);
+      return '<div class="picker-tile" onclick="app.setClaim(\'' + p.id + '\')" style="display:flex; align-items:center; gap:10px; border:3px solid ' + H + '; background:#fff; padding:9px 11px; cursor:pointer; transition:.12s;">' +
+        '<div style="width:34px; height:34px; border-radius:50%; background:' + p.color + '; border:2.5px solid ' + H + '; display:flex; align-items:center; justify-content:center; flex:none;">' +
+          '<span class="arc" style="font-weight:900; font-size:15px; color:' + nc + ';">' + p.num + '</span></div>' +
+        '<span class="ns" style="font-weight:900; font-size:17px;">' + p.name + '</span>' +
+      '</div>';
+    }).join('');
+
+    return '' +
+      '<div style="position:fixed; inset:0; background:rgba(22,19,17,.55); display:flex; align-items:center; justify-content:center; padding:24px; z-index:50;">' +
+        '<div style="width:100%; max-width:392px; background:#F2ECDF; border:4px solid ' + H + '; padding:20px; animation:pop .16s ease-out;">' +
+          '<div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px;">' +
+            '<div>' +
+              '<div class="arc" style="font-weight:900; font-size:20px; text-transform:uppercase; line-height:.95;">Who\'s getting this?</div>' +
+              '<div class="ns" style="font-weight:900; font-size:15px; color:' + RED + ';">谁来准备？</div>' +
+            '</div>' +
+            '<div onclick="app.closePicker()" style="width:34px; height:34px; border:3px solid ' + H + '; background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:900;">✕</div>' +
+          '</div>' +
+          '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' + tiles + '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function render() {
+    var v = state.view, body = '';
+    if (v.name === 'home') body = viewHome();
+    else if (v.name === 'person') body = viewPerson();
+    else if (v.name === 'form') body = viewForm();
+    else if (v.name === 'detail') body = viewDetail();
+    document.getElementById('screen').innerHTML = body + claimPicker();
+  }
+
+  // =====================================================================
+  //  Boot
+  // =====================================================================
+  (async function init() {
+    if (!useSupabase) {
+      setConn('local only · 仅本机', '#9A6A00');
+      console.warn('[Family Line] Supabase not configured — running in local-only mode. Fill in config.js for shared state.');
+    }
+    render(); // first paint (placeholder/empty), then hydrate
+    await refresh();
+    store.subscribe(function () {
+      // don't yank the form out from under someone who's typing
+      refresh(state.view.name !== 'form');
+    });
+  })();
+})();
+</script>
+</body>
+</html>
