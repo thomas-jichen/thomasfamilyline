@@ -26,6 +26,7 @@
   .picker-tile:hover{ background:#FBF7EE; transform:translateY(-1px); }
   .unclaim-btn:hover{ background:#F2ECDF; }
   .claim-cta:hover{ background:#2A2521 !important; }
+  .link-chip:hover{ background:#FBF7EE; }
 
 </style>
 </head>
@@ -472,9 +473,11 @@
       : '';
 
     var linkBtn = d.hasLink
-      ? '<a href="' + esc(d.link) + '" target="_blank" rel="noopener" style="display:block; text-decoration:none; background:' + BLUE + '; padding:15px; text-align:center; margin-top:16px; border:4px solid ' + H + ';">' +
-          '<span class="arc" style="font-weight:900; font-size:15px; color:#fff; text-transform:uppercase;">View sample link</span>' +
-          '<span class="ns" style="font-weight:700; font-size:14px; color:' + YEL + '; margin-left:8px;">查看商品链接</span></a>'
+      ? '<a href="' + esc(d.link) + '" target="_blank" rel="noopener" class="link-chip" onclick="event.stopPropagation()" style="display:inline-flex; align-items:center; gap:7px; text-decoration:none; border:2.5px solid ' + H + '; background:#fff; padding:7px 11px; margin-top:14px;">' +
+          '<span style="width:9px; height:9px; flex:none; border-radius:50%; background:' + BLUE + '; border:2px solid ' + H + ';"></span>' +
+          '<span class="arc" style="font-weight:900; font-size:12px; color:' + H + '; text-transform:uppercase; letter-spacing:.3px;">View sample</span>' +
+          '<span class="ns" style="font-weight:700; font-size:12px; opacity:.65;">查看链接</span>' +
+          '<span class="arc" style="font-weight:900; font-size:13px; color:' + BLUE + ';">↗</span></a>'
       : '';
 
     return '' +
@@ -498,11 +501,11 @@
               '<span class="arc" style="font-weight:900; font-size:32px; color:' + d.stubColor + ';">' + esc(d.price) + '</span>' +
               '<span class="mono" style="font-size:11px; border:2px solid ' + H + '; padding:2px 7px;">' + esc(d.shop) + '</span>' +
             '</div>' +
+            linkBtn +
           '</div>' +
           notesBlock +
           '<div style="border-top:3px dashed ' + H + '; padding:14px 16px;">' + claimRow + '</div>' +
         '</div>' +
-        linkBtn +
       '</div>';
   }
 
