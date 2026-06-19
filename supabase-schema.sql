@@ -20,8 +20,12 @@ create table if not exists public.items (
   image       text default '',
   priority    boolean default false,
   claimed_by  text,                          -- m1..m7 or null
+  notes       text default '',               -- freeform: sizing, color, etc.
   created_at  timestamptz not null default now()
 );
+
+-- If the table already exists from an earlier run, add the column:
+alter table public.items add column if not exists notes text default '';
 
 create index if not exists items_owner_idx on public.items (owner_id);
 create index if not exists items_created_idx on public.items (created_at);

@@ -66,7 +66,7 @@
 
   function defaults() {
     var it = function (id, ownerId, en, cn, price, shop, link, image, priority, claimedBy) {
-      return { id: id, ownerId: ownerId, title_en: en, title_cn: cn, price: price, shop: shop, link: link, image: image, priority: priority, claimedBy: claimedBy };
+      return { id: id, ownerId: ownerId, title_en: en, title_cn: cn, price: price, shop: shop, link: link, image: image, priority: priority, claimedBy: claimedBy, notes: '' };
     };
     return [
       it('i01', 'm1', 'LEGO Train Set', '乐高火车套装', '$89', 'lego.com', 'https://www.lego.com', 'https://picsum.photos/seed/legotrain/600/400', true, 'm2'),
@@ -106,7 +106,7 @@
       id: row.id, ownerId: row.owner_id,
       title_en: row.title_en, title_cn: row.title_cn,
       price: row.price, shop: row.shop, link: row.link, image: row.image,
-      priority: !!row.priority, claimedBy: row.claimed_by,
+      priority: !!row.priority, claimedBy: row.claimed_by, notes: row.notes || '',
       created_at: row.created_at,
     };
   }
@@ -115,7 +115,7 @@
       owner_id: item.ownerId,
       title_en: item.title_en, title_cn: item.title_cn,
       price: item.price, shop: item.shop, link: item.link, image: item.image,
-      priority: !!item.priority, claimed_by: item.claimedBy || null,
+      priority: !!item.priority, claimed_by: item.claimedBy || null, notes: item.notes || '',
     };
   }
 
@@ -149,7 +149,7 @@
       var dbPatch = {};
       if ('ownerId' in patch) dbPatch.owner_id = patch.ownerId;
       if ('claimedBy' in patch) dbPatch.claimed_by = patch.claimedBy || null;
-      ['title_en', 'title_cn', 'price', 'shop', 'link', 'image', 'priority'].forEach(function (k) { if (k in patch) dbPatch[k] = patch[k]; });
+      ['title_en', 'title_cn', 'price', 'shop', 'link', 'image', 'priority', 'notes'].forEach(function (k) { if (k in patch) dbPatch[k] = patch[k]; });
       var res = await sb.from('items').update(dbPatch).eq('id', id);
       if (res.error) console.error(res.error);
     },
@@ -204,7 +204,7 @@
     },
     goAdd: function () {
       var memberId = state.view.memberId;
-      state.form = { ownerId: memberId, title_en: '', title_cn: '', price: '', shop: '', link: '', image: '', priority: false, claimedBy: null };
+      state.form = { ownerId: memberId, title_en: '', title_cn: '', price: '', shop: '', link: '', image: '', priority: false, claimedBy: null, notes: '' };
       app.go({ name: 'form' });
     },
     edit: function () {
@@ -413,6 +413,8 @@
             label('Image URL / 图片链接') +
             '<input value="' + esc(f.image) + '" oninput="app.updateImagePreview(this.value)" placeholder="https://...jpg" style="width:100%; border:2px solid ' + H + '; padding:11px 12px; font-size:13px; margin-bottom:10px; outline:none; background:#fff;">' +
             '<div id="form-image-preview" style="position:relative; height:130px; border:2px solid ' + H + '; background:' + tint(owner.color) + '; margin-bottom:14px; overflow:hidden;">' + imgInner + '</div>' +
+            label('Notes / 备注 (尺寸、颜色等)') +
+            '<textarea oninput="app.onField(\'notes\', this.value)" placeholder="e.g. size M · 例如 尺码 M、喜欢蓝色" class="ns" style="width:100%; border:2px solid ' + H + '; padding:11px 12px; font-size:14px; font-weight:700; margin-bottom:14px; outline:none; background:#fff; resize:vertical; min-height:64px; font-family:inherit;">' + esc(f.notes) + '</textarea>' +
             '<div onclick="app.togglePri()" style="border:2px solid ' + H + '; padding:11px 14px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:' + priBg + ';">' +
               '<span style="font-size:14px; font-weight:700;"><span style="font-size:16px;">★</span> Most-wanted · <span class="ns">最想要</span></span>' +
               '<span style="width:46px; height:24px; border:2px solid ' + H + '; position:relative; background:' + priTrack + ';">' +
@@ -462,6 +464,13 @@
           '<span class="arc" style="font-weight:900; font-size:15px; color:#fff; text-transform:uppercase;">I\'ll get this</span>' +
           '<span class="ns" style="font-weight:700; font-size:14px; color:' + YEL + '; margin-left:8px;">我来准备</span></div>';
 
+    var notesBlock = d.notes
+      ? '<div style="border-top:3px dashed ' + H + '; padding:14px 16px;">' +
+          '<div class="mono" style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.6; margin-bottom:6px;">Notes · 备注</div>' +
+          '<div class="ns" style="font-weight:700; font-size:15px; line-height:1.4; white-space:pre-wrap;">' + esc(d.notes) + '</div>' +
+        '</div>'
+      : '';
+
     var linkBtn = d.hasLink
       ? '<a href="' + esc(d.link) + '" target="_blank" rel="noopener" style="display:block; text-decoration:none; background:' + BLUE + '; padding:15px; text-align:center; margin-top:16px; border:4px solid ' + H + ';">' +
           '<span class="arc" style="font-weight:900; font-size:15px; color:#fff; text-transform:uppercase;">View sample link</span>' +
@@ -490,6 +499,7 @@
               '<span class="mono" style="font-size:11px; border:2px solid ' + H + '; padding:2px 7px;">' + esc(d.shop) + '</span>' +
             '</div>' +
           '</div>' +
+          notesBlock +
           '<div style="border-top:3px dashed ' + H + '; padding:14px 16px;">' + claimRow + '</div>' +
         '</div>' +
         linkBtn +
