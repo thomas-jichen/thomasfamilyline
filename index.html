@@ -454,9 +454,7 @@
 
     var claimRow = d.claimed
       ? '<div style="display:flex; align-items:center; gap:12px;">' +
-          '<div style="flex:1;">' +
-            '<div class="mono" style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.6;">Claimed · 已认领</div>' +
-            '<div class="ns" style="font-weight:900; font-size:18px;">有人准备中 · Someone\'s got this</div></div>' +
+          '<div class="ns" style="flex:1; font-weight:700; font-size:15px; line-height:1.4;">Someone\'s got this · 有人准备中</div>' +
           '<div class="unclaim-btn" onclick="app.unclaim()" style="border:2px solid ' + H + '; padding:6px 10px; cursor:pointer; font-size:11px; font-weight:700;">取消</div>' +
         '</div>'
       : '<div class="claim-cta" onclick="app.openPicker()" style="background:' + H + '; padding:14px; text-align:center; cursor:pointer;">' +
